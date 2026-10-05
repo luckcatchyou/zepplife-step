@@ -272,12 +272,7 @@
         </div>
 
         <label class="remember-row">
-          <input type="checkbox" id="rememberMe" checked>
-          <span>仅记住账号 (不保存密码)</span>
-        </label>
-
-        <label class="remember-row">
-          <input type="checkbox" id="allowVirtualDevice">
+          <input type="checkbox" id="allowVirtualDevice" checked>
           <span>同意注册测试设备（仅当前账号无可用设备时使用）</span>
         </label>
 
@@ -306,15 +301,15 @@
     const accountInput = document.getElementById('account');
     const passwordInput = document.getElementById('password');
     const stepsInput = document.getElementById('steps');
-    const rememberMe = document.getElementById('rememberMe');
     const allowVirtualDevice = document.getElementById('allowVirtualDevice');
     const submitBtn = document.getElementById('submitBtn');
     const btnText = document.getElementById('btnText');
     const spinner = document.getElementById('spinner');
     const resultBox = document.getElementById('resultBox');
 
-    // 页面载入时只读取账号。旧版本会把明文密码和跨账号 Token 写入浏览器存储。
-    // Token 不再在网页端缓存：切换账号时必须重新登录，避免把步数提交到上一账号。
+    // 页面载入时只回填账号，不回填也不保存密码（密码交给浏览器密码管理器）。
+    // 同时清除浏览器中可能存在的 Zepp token 与已保存密码：切换账号时必须重新登录，
+    // 避免把步数提交到上一账号。
     window.addEventListener('DOMContentLoaded', () => {
       const savedAcc = localStorage.getItem('zepp_user');
       if (savedAcc) accountInput.value = savedAcc;
@@ -340,11 +335,8 @@
       const password = passwordInput.value;
       let steps = parseInt(stepsInput.value, 10);
 
-      if (rememberMe.checked) {
-        localStorage.setItem('zepp_user', user);
-      } else {
-        localStorage.removeItem('zepp_user');
-      }
+      // 只保存账号，密码不写入任何浏览器存储。
+      localStorage.setItem('zepp_user', user);
       localStorage.removeItem('zepp_pwd');
 
       // UI 状态切换为提交中
