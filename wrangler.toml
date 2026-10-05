@@ -1,10 +1,13 @@
-# Cloudflare Pages 配置（Pages Functions 会读取项目根目录的 wrangler.toml）
+# Cloudflare Worker 配置（Workers Builds 使用 `npx wrangler deploy`）
 name = "zepp-life-step"
+main = "worker.js"
 
 # 2026-08-04 及之后的兼容日期会默认开启 nodejs_compat / nodejs_compat_v2，
 # 因此不需要再显式声明兼容性标志；lib/zepp-core.js 依赖 node:crypto 与 Buffer。
 compatibility_date = "2026-10-05"
 
-# 只有使用 `npx wrangler pages deploy` 手动部署时才需要这一行。
-# 通过 Git + 构建命令部署时，输出目录以 Cloudflare 后台配置为准。
-pages_build_output_dir = "dist"
+# 静态资源：由 `npm run build:pages` 生成的 dist/（里面只有 index.html），
+# 通过 env.ASSETS 提供，避免 api/、lib/、server.js 等源码被公开下载。
+[assets]
+directory = "./dist"
+binding = "ASSETS"

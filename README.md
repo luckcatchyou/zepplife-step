@@ -53,34 +53,41 @@
 
 之后仓库有更新时，Vercel 会自动重新部署。打开网页前刷新一次，确保加载最新版本。
 
-## 方式二：部署到 Cloudflare Pages
+## 方式二：部署到 Cloudflare（Workers Builds）
 
-适合希望通过网址随时使用，并且不想用 Vercel 的人。后端由 Pages Functions 提供，接口路径同样是 `/api/step`。
+适合希望通过网址随时使用，并且不想用 Vercel 的人。部署为一个 Worker：`worker.js` 提供 `/api/step`，`index.html` 作为静态资源一起发布。
 
-1. 打开 [Cloudflare 控制台](https://dash.cloudflare.com)，进入 **Workers & Pages → Create → Pages**，连接 Git 仓库。
+1. 打开 [Cloudflare 控制台](https://dash.cloudflare.com)，进入 **Workers & Pages → Create → Workers**，连接 Git 仓库。
 2. 构建设置按下表填写：
 
    | 配置项 | 值 |
    | --- | --- |
    | 框架预设 | `无` / `None` |
    | 构建命令 | `npm run build:pages` |
-   | 构建输出目录 | `dist` |
+   | 部署命令 | `npx wrangler deploy`（默认值，不用改） |
+   | 预览命令 | `npx wrangler preview`（默认值，不用改） |
    | 根目录 | `/` |
 
-   **部署命令**和**预览命令**保持默认即可（本项目没有编译步骤，`dist` 里只生成 `index.html`）。
+   本项目没有编译步骤，`dist` 里只生成 `index.html`，所以不必填构建输出目录。
 3. 点击 **Save and Deploy**。之后每次推送代码会自动重新部署。
 
 注意事项：
 
-- `functions/` 目录必须留在仓库根目录，它不受构建输出目录影响，Pages 会自动把它部署成接口。
-- 不要把仓库根目录直接当输出目录，否则 `api/`、`lib/`、`server.js` 会被当成静态文件公开下载。
+- 后端入口是 `worker.js`，静态资源目录在 `wrangler.toml` 的 `[assets]`（`./dist`）。不要把仓库根目录直接当资源目录，否则 `api/`、`lib/`、`server.js` 会被当成静态文件公开下载。
 - 兼容日期写在 `wrangler.toml`（`2026-10-05`），用于启用 `node:crypto`；如需在后台改，不要调早于 `2026-08-04`。
 - Cloudflare 免费计划对单次请求的 CPU 时间有限制。登录失败时会串行尝试多个节点，偶发偏慢或超时是正常的，稍后再试即可。
+- 如果之后改用 Cloudflare **Pages**（域名是 `*.pages.dev`）而不是 Workers，请改用 `functions/api/step.js` 这份入口，并把部署命令改成 `npx wrangler pages deploy dist --project-name=<项目名>`。
 
 本地预览 Cloudflare 版本（需要 Node 18+，会临时下载 wrangler）：
 
 ```bash
-npm run dev:pages
+npm run dev:cf
+```
+
+手动部署：
+
+```bash
+npm run deploy:cf
 ```
 
 ## 方式三：在电脑上本地运行
@@ -204,10 +211,12 @@ Content-Type: application/json
 ```text
 ├── api/
 │   └── step.js         # Vercel Serverless Function 入口（仅做 req/res 适配）
+├── worker.js           # Cloudflare Worker 入口：路由 /api/step，其余交给静态资源
 ├── functions/
-│   └── api/step.js     # Cloudflare Pages Function 入口（仅做 Request/Response 适配）
+│   └── api/step.js     # Cloudflare Pages Function 入口（改用 Pages 部署时使用）
 ├── lib/
 │   ├── zepp-core.js    # 业务逻辑：登录、设备检查与步数提交（两个平台共用）
+│   ├── step-handler.js # 与平台无关的 Request -> Response 处理（Worker / Pages 共用）
 │   ├── http-node.js    # Node/Vercel 网络层（原生 https）
 │   ├── http-worker.js  # Cloudflare 网络层（原生 fetch）
 │   └── template.js     # 上传数据模板
