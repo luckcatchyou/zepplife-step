@@ -1,9 +1,12 @@
 {
   "name": "zepp-life-step",
   "version": "1.0.0",
-  "description": "微信步数修改工具 - 基于 Zepp Life 华米云端接口与 Vercel 部署",
+  "description": "微信步数修改工具 - 基于 Zepp Life 华米云端接口，可部署到 Vercel 或 Cloudflare Pages",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:pages": "node scripts/build-pages.mjs",
+    "dev:pages": "node scripts/build-pages.mjs && npx wrangler pages dev dist",
+    "deploy:pages": "node scripts/build-pages.mjs && npx wrangler pages deploy dist"
   }
 }

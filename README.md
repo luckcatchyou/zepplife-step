@@ -53,7 +53,37 @@
 
 之后仓库有更新时，Vercel 会自动重新部署。打开网页前刷新一次，确保加载最新版本。
 
-## 方式二：在电脑上本地运行
+## 方式二：部署到 Cloudflare Pages
+
+适合希望通过网址随时使用，并且不想用 Vercel 的人。后端由 Pages Functions 提供，接口路径同样是 `/api/step`。
+
+1. 打开 [Cloudflare 控制台](https://dash.cloudflare.com)，进入 **Workers & Pages → Create → Pages**，连接 Git 仓库。
+2. 构建设置按下表填写：
+
+   | 配置项 | 值 |
+   | --- | --- |
+   | 框架预设 | `无` / `None` |
+   | 构建命令 | `npm run build:pages` |
+   | 构建输出目录 | `dist` |
+   | 根目录 | `/` |
+
+   **部署命令**和**预览命令**保持默认即可（本项目没有编译步骤，`dist` 里只生成 `index.html`）。
+3. 点击 **Save and Deploy**。之后每次推送代码会自动重新部署。
+
+注意事项：
+
+- `functions/` 目录必须留在仓库根目录，它不受构建输出目录影响，Pages 会自动把它部署成接口。
+- 不要把仓库根目录直接当输出目录，否则 `api/`、`lib/`、`server.js` 会被当成静态文件公开下载。
+- 兼容日期写在 `wrangler.toml`（`2026-10-05`），用于启用 `node:crypto`；如需在后台改，不要调早于 `2026-08-04`。
+- Cloudflare 免费计划对单次请求的 CPU 时间有限制。登录失败时会串行尝试多个节点，偶发偏慢或超时是正常的，稍后再试即可。
+
+本地预览 Cloudflare 版本（需要 Node 18+，会临时下载 wrangler）：
+
+```bash
+npm run dev:pages
+```
+
+## 方式三：在电脑上本地运行
 
 适合先测试，或不想部署到云端的人。
 
@@ -173,14 +203,24 @@ Content-Type: application/json
 
 ```text
 ├── api/
-│   └── step.js         # Vercel Serverless Function：登录、设备检查与步数提交
+│   └── step.js         # Vercel Serverless Function 入口（仅做 req/res 适配）
+├── functions/
+│   └── api/step.js     # Cloudflare Pages Function 入口（仅做 Request/Response 适配）
 ├── lib/
+│   ├── zepp-core.js    # 业务逻辑：登录、设备检查与步数提交（两个平台共用）
+│   ├── http-node.js    # Node/Vercel 网络层（原生 https）
+│   ├── http-worker.js  # Cloudflare 网络层（原生 fetch）
 │   └── template.js     # 上传数据模板
+├── scripts/
+│   └── build-pages.mjs # 生成 Cloudflare Pages 的静态输出目录 dist/
 ├── index.html          # 网页表单
 ├── server.js           # 本地运行服务
 ├── vercel.json         # Vercel 路由配置
+├── wrangler.toml       # Cloudflare Pages 配置（兼容日期等）
 └── package.json        # Node.js 项目配置
 ```
+
+两个平台的接口行为完全一致，区别只在网络层：Vercel 用 `node:https`，Cloudflare 用运行时原生的 `fetch`（`redirect: 'manual'`，保证能读到登录接口的 302 `Location`）。
 
 ## 使用限制
 
